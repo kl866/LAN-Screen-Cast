@@ -1,7 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"lan-screen-cast/internal/ui"
+)
 
 func main() {
-	fmt.Println("LAN Screen Cast - Sender")
+	ui.RunSender()
 }

@@ -1,7 +1,18 @@
 package main
 
-import "fmt"
+import (
+	"flag"
+	"log"
+
+	"lan-screen-cast/internal/ui"
+)
 
 func main() {
-	fmt.Println("LAN Screen Cast - Viewer")
+	port := flag.String("port", ":9527", "listen address")
+	flag.Parse()
+
+	log.Printf("Starting viewer on %s", *port)
+	if err := ui.RunViewer(*port); err != nil {
+		log.Fatalf("viewer error: %v", err)
+	}
 }
