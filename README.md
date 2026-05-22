@@ -1,87 +1,87 @@
 # LAN Screen Cast
 
-A lightweight LAN screen casting tool for Windows, written in pure Go with no CGo dependencies. Share your screen to another PC on the same local network with low latency.
+轻量级局域网投屏工具，Windows 平台，纯 Go 编写（无 CGo 依赖）。通过局域网将一台电脑的屏幕实时共享到另一台电脑。
 
-## Features
+## 功能特性
 
-- **Low latency** — diff-based dirty block detection with xxhash, only changed regions are encoded and transmitted
-- **Pure Go + Win32 API** — no CGo, no external dependencies beyond Go standard library and xxhash
-- **Minimal bandwidth** — 16×16 block-level change detection, PNG-encoded dirty rects only
-- **Sender queue** — multiple senders can connect; one active at a time, others wait in queue
-- **IP memory** — sender remembers the last connected IP address
-- **Custom UI** — native Win32 windows with owner-draw styling, Chinese/English text
-- **Log to file** — both sender and viewer write logs to local files, console window hidden
+- **低延迟** — 基于 xxhash 的差异检测，仅编码和传输变化的区域
+- **纯 Go + Win32 API** — 无 CGo，除 Go 标准库外仅依赖 xxhash
+- **节省带宽** — 16×16 像素块级脏区域检测，只传输变化的 PNG 编码块
+- **发送端队列** — 支持多个发送端同时连接，一个激活投屏，其余排队等待
+- **IP 记忆** — 发送端自动记住上次连接的 IP 地址
+- **原生 UI** — Win32 原生窗口，自绘控件，中文界面
+- **日志文件** — 发送端和接收端均将日志写入本地文件，控制台窗口隐藏
 
-## Architecture
+## 架构
 
 ```
-Sender                              Viewer
+发送端 (Sender)                      接收端 (Viewer)
 ┌──────────────┐                    ┌──────────────┐
-│  GDI Capture │                    │  FrameBuffer │
+│  GDI 屏幕采集 │                    │  帧缓冲区     │
 │       ↓      │                    │       ↓      │
-│  Diff Detect │── TCP ──────────→ │  PNG Decode  │
-│       ↓      │   (custom proto)   │       ↓      │
-│  PNG Encode  │                    │  GDI Render  │
+│  差异检测     │── TCP ──────────→ │  PNG 解码    │
+│       ↓      │   (自定义协议)      │       ↓      │
+│  PNG 编码    │                    │  GDI 渲染    │
 └──────────────┘                    └──────────────┘
 ```
 
-- **Capture**: GDI `BitBlt` into a 32-bit DIBSection for direct memory access
-- **Diff**: 16×16 block hashing with xxhash, comparing against previous frame
-- **Codec**: PNG encode dirty rects (best speed), decode on viewer side
-- **Network**: Custom binary protocol with 9-byte header (magic + type + length), TCP transport
-- **Session**: Queue manager with activate/deactivate, position tracking
+- **屏幕采集**：GDI `BitBlt` 拷贝到 32 位 DIBSection，直接内存访问，无额外拷贝
+- **差异检测**：16×16 像素块 xxhash 哈希，与上一帧对比，仅找出变化区域
+- **编解码**：脏区域 PNG 编码（最快速度），接收端解码后合成
+- **网络传输**：自定义二进制协议，9 字节头部（魔数 + 类型 + 长度），TCP 传输
+- **会话管理**：队列管理器，支持激活/休眠切换、排队位置通知
 
-## Project Structure
+## 项目结构
 
 ```
 lan-screen-cast/
 ├── cmd/
-│   ├── sender/main.go      # Sender entry point
-│   └── viewer/main.go      # Viewer entry point
+│   ├── sender/main.go      # 发送端入口
+│   └── viewer/main.go      # 接收端入口
 ├── internal/
-│   ├── capture/            # GDI screen capture (Windows)
-│   ├── codec/              # PNG encode/decode
-│   ├── diff/               # Dirty block detection (xxhash)
-│   ├── engine/             # Sender/viewer core logic
-│   ├── network/            # TCP client/server with custom protocol
-│   ├── protocol/           # Wire protocol & control messages
-│   ├── session/            # Sender queue manager
-│   └── ui/                 # Win32 UI (sender & viewer windows)
-├── sender.ico              # Sender application icon
-├── viewer.ico              # Viewer application icon
+│   ├── capture/            # GDI 屏幕采集（Windows）
+│   ├── codec/              # PNG 编解码
+│   ├── diff/               # 脏块差异检测（xxhash）
+│   ├── engine/             # 发送端/接收端核心逻辑
+│   ├── network/            # TCP 客户端/服务端，自定义协议
+│   ├── protocol/           # 通信协议及控制消息
+│   ├── session/            # 发送端队列管理
+│   └── ui/                 # Win32 原生界面（发送端和接收端窗口）
+├── sender.ico              # 发送端图标
+├── viewer.ico              # 接收端图标
 ├── go.mod
 └── go.sum
 ```
 
-## Quick Start
+## 快速开始
 
-### Prerequisites
+### 环境要求
 
-- Windows 10 or later
+- Windows 10 及以上
 - Go 1.23+
-- [windres](https://sourceware.org/binutils/docs/binutils/windres.html) (for embedding icons, optional)
+- [windres](https://sourceware.org/binutils/docs/binutils/windres.html)（用于嵌入图标，可选）
 
-### Build
+### 构建
 
 ```bash
-# Build sender
+# 构建发送端
 cd cmd/sender
-windres -o rsrc.syso sender.rc   # embed icon (optional)
+windres -o rsrc.syso sender.rc   # 嵌入图标（可选）
 go build -ldflags "-H windowsgui" -o sender.exe .
 
-# Build viewer
+# 构建接收端
 cd cmd/viewer
-windres -o rsrc.syso viewer.rc   # embed icon (optional)
+windres -o rsrc.syso viewer.rc   # 嵌入图标（可选）
 go build -ldflags "-H windowsgui" -o viewer.exe .
 ```
 
-The `-H windowsgui` flag hides the console window. Logs are written to `sender.log` / `viewer.log` next to the executables.
+`-H windowsgui` 用于隐藏控制台窗口。日志会写入 exe 同目录下的 `sender.log` / `viewer.log`。
 
-Pre-built `rsrc.syso` files are included in the repository, so `windres` is optional — icons will be embedded as-is.
+仓库中已包含预编译的 `rsrc.syso` 文件，无需 `windres` 也可直接构建（图标已内嵌）。
 
-## Usage
+## 使用说明
 
-### Viewer (接收端)
+### Viewer（接收端）
 
 在要观看投屏的电脑上启动 viewer.exe，等待发送端连接。
 
@@ -93,13 +93,11 @@ viewer.exe -port :9527
 |------|------|--------|
 | `-port` | 监听端口 | `:9527` |
 
-启动后会出现一个窗口，显示 **"LAN Screen Cast"** 标题和本机监听地址（如 `192.168.1.100:9527`）。
+启动后弹出一个窗口，显示 **"LAN Screen Cast"** 标题以及本机监听地址（如 `192.168.1.100:9527`）。发送端需要填写这个地址来连接。
 
-窗口下方会显示蓝色的地址信息，发送端需要填写这个地址来连接。
+如果窗口显示深灰色背景和蓝色地址文字，说明还没有发送端接入，正在等待连接。
 
-**提示**：如果窗口显示灰色背景，说明还没有发送端连接，等待连接中。
-
-### Sender (发送端)
+### Sender（发送端）
 
 在要共享屏幕的电脑上启动 sender.exe，连接到 viewer。
 
@@ -107,7 +105,7 @@ viewer.exe -port :9527
 sender.exe
 ```
 
-启动后会出现一个 **500×380** 的窗口，界面包含：
+启动后显示一个 **500×380** 的窗口，界面各区域说明：
 
 | 区域 | 说明 |
 |------|------|
@@ -115,8 +113,8 @@ sender.exe
 | **IP 地址** | 输入 viewer 的 IP 地址，如 `192.168.1.100` |
 | **端口号** | viewer 的监听端口，默认 `9527` |
 | **状态提示** | 显示当前连接状态（等待连接、投屏中等） |
-| **开始投屏 按钮** | 蓝色按钮，点击后连接到 viewer 并开始投屏 |
-| **停止投屏 按钮** | 红色按钮，点击后断开连接，停止投屏 |
+| **开始投屏** | 蓝色按钮，点击后连接到 viewer 并开始投屏 |
+| **停止投屏** | 红色按钮，点击后断开连接并停止投屏 |
 
 ### 使用步骤
 
@@ -140,7 +138,7 @@ sender.exe
 
 ### IP 记忆
 
-发送端会自动保存上次成功连接的 IP 地址。配置文件 `sender.conf` 保存在 sender.exe 同目录下，下次启动时自动填充。
+发送端自动保存上次成功连接的 IP 地址。配置文件 `sender.conf` 保存在 sender.exe 同目录下，下次启动时自动填充。
 
 ### 日志文件
 
@@ -165,41 +163,41 @@ ipconfig
 
 viewer 窗口标题栏也会自动显示检测到的本机局域网 IP 地址。
 
-## How It Works
+## 工作原理
 
-1. Sender connects to viewer via TCP
-2. Sender sends a `join` control message with screen dimensions
-3. Viewer acknowledges with `activate` (or sends queue position if another sender is active)
-4. Sender captures screen at ~30 FPS, detects dirty blocks, PNG-encodes them, sends via custom protocol
-5. Viewer decodes and applies each block to a frame buffer, renders via `StretchBlt`
+1. 发送端通过 TCP 连接到接收端
+2. 发送端发送 `join` 控制消息，包含屏幕分辨率
+3. 接收端回复 `activate` 激活（如有其他发送端正在投屏，则返回排队位置）
+4. 发送端以约 30 FPS 采集屏幕，检测脏块，PNG 编码后通过自定义协议发送
+5. 接收端解码每个块并写入帧缓冲区，通过 `StretchBlt` 渲染显示
 
-### Protocol
+### 通信协议
 
-Custom binary protocol with 9-byte header:
+自定义二进制协议，9 字节头部：
 
 ```
-| Magic (4B) | Type (1B) | Payload Length (4B) | Payload (variable) |
+| 魔数 (4B) | 类型 (1B) | 载荷长度 (4B) | 载荷 (变长) |
 ```
 
-- Magic: `LSC\x01`
-- Types: `0x01` (control), `0x02` (video)
-- Max payload: 100 MB
+- 魔数：`LSC\x01`
+- 类型：`0x01`（控制消息）、`0x02`（视频数据）
+- 最大载荷：100 MB
 
-## Performance
+## 性能
 
-- Screen capture via GDI `BitBlt` at physical resolution (DESKTOPHORZRES/DESKTOPVERTRES)
-- Block-level diffing reduces bandwidth to changed regions only
-- ~30 FPS capture rate, ~60 FPS viewer render with `COLORONCOLOR` stretch mode
-- Direct DIBSection memory access avoids extra copies on capture side
+- GDI `BitBlt` 物理分辨率采集（DESKTOPHORZRES/DESKTOPVERTRES）
+- 块级差异检测，仅传输变化区域，大幅降低带宽
+- 采集帧率约 30 FPS，渲染帧率约 60 FPS（`COLORONCOLOR` 拉伸模式）
+- DIBSection 直接内存访问，采集端避免额外内存拷贝
 
-## Limitations
+## 局限性
 
-- Windows only (Win32 GDI API)
-- Single display capture (primary monitor)
-- No audio transmission
-- No encryption — intended for trusted LAN environments
-- PNG encoding trades CPU for bandwidth; H.264 would be more efficient for full-screen video
+- 仅支持 Windows 平台（依赖 Win32 GDI API）
+- 仅采集主显示器
+- 不传输音频
+- 无加密，适用于可信局域网环境
+- PNG 编码以 CPU 换取带宽；全屏视频场景 H.264 效率更高
 
-## License
+## 许可证
 
 MIT
