@@ -80,8 +80,8 @@ go build -ldflags "-H windowsgui" -o viewer.exe .
 仓库中已包含预编译的 `rsrc.syso` 文件，无需 `windres` 也可直接构建（图标已内嵌）。
 | 组件 | 下载链接 |
 |------|----------|
-| 📡 发送端 | [局域网屏幕共享-发送端.exe](链接地址) |
-| 🖥️ 接收端 | [局域网屏幕共享-接收端.exe](链接地址) |
+| 📡 发送端 | [局域网屏幕共享-发送端.exe](https://github.com/kl866/LAN-Screen-Cast/releases/download/v1.0/sender.exe) |
+| 🖥️ 接收端 | [局域网屏幕共享-接收端.exe](https://github.com/kl866/LAN-Screen-Cast/releases/download/v1.0/viewer.exe) |
 
 ## 使用说明
 
