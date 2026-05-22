@@ -78,6 +78,10 @@ go build -ldflags "-H windowsgui" -o viewer.exe .
 `-H windowsgui` 用于隐藏控制台窗口。日志会写入 exe 同目录下的 `sender.log` / `viewer.log`。
 
 仓库中已包含预编译的 `rsrc.syso` 文件，无需 `windres` 也可直接构建（图标已内嵌）。
+| 组件 | 下载链接 |
+|------|----------|
+| 📡 发送端 | [局域网屏幕共享-发送端.exe](链接地址) |
+| 🖥️ 接收端 | [局域网屏幕共享-接收端.exe](链接地址) |
 
 ## 使用说明
 
